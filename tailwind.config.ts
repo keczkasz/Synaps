@@ -22,6 +22,13 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          soft: "hsl(var(--primary-soft))",
+        },
+        emotion: {
+          calm: "hsl(var(--emotion-calm))",
+          energetic: "hsl(var(--emotion-energetic))",
+          creative: "hsl(var(--emotion-creative))",
+          focused: "hsl(var(--emotion-focused))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -58,10 +65,23 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-soft": "var(--gradient-soft)",  
+        "gradient-warm": "var(--gradient-warm)",
+      },
+      boxShadow: {
+        "soft": "var(--shadow-soft)",
+        "card": "var(--shadow-card)",
+        "floating": "var(--shadow-floating)",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "sans-serif"],
       },
       keyframes: {
         "accordion-down": {
