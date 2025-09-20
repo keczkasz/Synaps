@@ -54,8 +54,50 @@ export function useConnectionMatching() {
         .neq('user_id', user.id)
         .not('display_name', 'is', null);
 
-      if (profiles) {
-        const connectionsWithScoring = profiles.map(profile => {
+      // Create mock profiles if no real profiles exist
+      const mockProfiles = [
+        {
+          id: 'mock-1',
+          user_id: 'mock-user-1',
+          display_name: 'Sarah Chen',
+          avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b3e2?w=150&h=150&fit=crop&crop=face',
+          bio: 'Creative writer and book enthusiast',
+          mood: 'Inspired',
+          interests: ['Books', 'Writing', 'Asian Literature', 'Poetry'],
+          current_intentions: 'Looking to connect with fellow creatives',
+          connection_goals: 'Creative partnerships and meaningful discussions',
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-2',
+          user_id: 'mock-user-2',
+          display_name: 'Marcus Johnson',
+          avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+          bio: 'Mindfulness coach and wellness advocate',
+          mood: 'Peaceful',
+          interests: ['Mindfulness', 'Meditation', 'Mental Health'],
+          current_intentions: 'Seeking connections for personal development',
+          connection_goals: 'Supportive conversations about growth',
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-3',
+          user_id: 'mock-user-3',
+          display_name: 'Elena Rodriguez',
+          avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+          bio: 'Career transition specialist',
+          mood: 'Hopeful',
+          interests: ['Career Development', 'Leadership', 'Professional Growth'],
+          current_intentions: 'Connecting with professionals in transition',
+          connection_goals: 'Professional mentorship exchanges',
+          updated_at: new Date().toISOString()
+        }
+      ];
+
+      const profilesData = profiles && profiles.length > 0 ? profiles : mockProfiles;
+
+      if (profilesData) {
+        const connectionsWithScoring = profilesData.map(profile => {
           const compatibilityScore = calculateCompatibility(profile, userIntentions);
           const aiReasoning = generateAIReasoning(profile, userIntentions);
           

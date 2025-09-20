@@ -3,16 +3,47 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Phone, Video, MoreHorizontal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Send, Phone, Video, MoreHorizontal, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 // Mock connection data (will be replaced with Supabase)
 const mockConnections = {
-  "1": { name: "Alex Chen", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face" },
-  "2": { name: "Maja Rodriguez", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face" },
-  "3": { name: "Janek Kluczek", avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=200&h=200&fit=crop&crop=face" },
-  "4": { name: "Elena Vasquez", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face" },
-  "5": { name: "Marcus Thompson", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face" }
+  "1": { 
+    name: "Sarah Chen", 
+    avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b3e2?w=150&h=150&fit=crop&crop=face",
+    interests: ["Books", "Writing", "Asian Literature"],
+    mood: "Inspired",
+    aiReasoning: "You both share a passion for creative writing and literature. Sarah's focus on Asian literature complements your interest in diverse storytelling perspectives."
+  },
+  "2": { 
+    name: "Marcus Johnson", 
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    interests: ["Mindfulness", "Mental Health", "Personal Growth"],
+    mood: "Peaceful",
+    aiReasoning: "Marcus's expertise in mindfulness aligns with your interest in personal development. You both value meaningful conversations about growth and well-being."
+  },
+  "3": { 
+    name: "Elena Rodriguez", 
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    interests: ["Career Development", "Leadership", "Professional Growth"],
+    mood: "Hopeful",
+    aiReasoning: "Elena's career transition expertise matches your professional interests. You can exchange valuable insights about leadership and career development."
+  },
+  "4": { 
+    name: "Janek Kluczek", 
+    avatar: "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=200&h=200&fit=crop&crop=face",
+    interests: ["Technology", "Innovation", "Startups"],
+    mood: "Energetic", 
+    aiReasoning: "Janek's tech background and entrepreneurial spirit align with your innovative thinking. Great for brainstorming and business discussions."
+  },
+  "5": { 
+    name: "Marcus Thompson", 
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face",
+    interests: ["Philosophy", "Deep Conversations", "Psychology"],
+    mood: "Reflective",
+    aiReasoning: "Marcus enjoys deep philosophical discussions and exploring life's big questions, perfect for meaningful intellectual exchanges."
+  }
 };
 
 const mockMessages = [
@@ -88,6 +119,27 @@ const Chat = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Matching Context */}
+      <Card className="mx-6 mb-4 p-4 bg-primary/5 border-primary/20">
+        <div className="flex items-start gap-3">
+          <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-medium text-foreground mb-2 flex items-center gap-2">
+              AI Connection Insight
+              <Badge variant="secondary" className="text-xs">{connection.mood}</Badge>
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3">{connection.aiReasoning}</p>
+            <div className="flex flex-wrap gap-1">
+              {connection.interests.map((interest, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {interest}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">

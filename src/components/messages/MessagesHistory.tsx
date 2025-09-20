@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface Conversation {
   id: string;
@@ -61,6 +62,12 @@ const mockConversations: Conversation[] = [
 ];
 
 export function MessagesHistory() {
+  const navigate = useNavigate();
+
+  const handleConversationClick = (conversationId: string) => {
+    navigate(`/chat/${conversationId}`);
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-4xl animate-fade-in">
       <div className="mb-8">
@@ -73,6 +80,7 @@ export function MessagesHistory() {
           <Card 
             key={conversation.id} 
             className="p-4 hover:shadow-md transition-all duration-200 cursor-pointer border border-border/50 bg-card/50 backdrop-blur-sm"
+            onClick={() => handleConversationClick(conversation.id)}
           >
             <div className="flex items-start gap-4">
               <Avatar className="h-12 w-12 ring-2 ring-border/20">
