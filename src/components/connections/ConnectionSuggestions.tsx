@@ -4,10 +4,38 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { MessageCircle, Heart, Sparkles, Users, Loader2 } from "lucide-react";
-import { useConnectionMatching } from "@/hooks/useConnectionMatching";
+import { useConnectionMatching, type Connection } from "@/hooks/useConnectionMatching";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 export function ConnectionSuggestions() {
   const { connections, userIntentions, loading } = useConnectionMatching();
+  const navigate = useNavigate();
+  const [creatingConversation, setCreatingConversation] = useState<string | null>(null);
+
+  const handleStartConversation = async (connection: Connection) => {
+    try {
+      setCreatingConversation(connection.id);
+      
+      const { data, error } = await supabase.functions.invoke('create-conversation', {
+        body: {
+          connectedUserId: connection.user_id,
+          aiReasoning: connection.aiReasoning,
+          connectionName: connection.name
+        }
+      });
+
+      if (error) throw error;
+
+      // Navigate to the conversation
+      navigate(`/chat/${data.conversationId}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    } finally {
+      setCreatingConversation(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -92,9 +120,18 @@ export function ConnectionSuggestions() {
 
                       {/* Actions */}
                       <div className="flex gap-3">
-                        <Button className="rounded-xl flex-1" size="sm" onClick={() => window.location.href = `/chat/${connection.id}`}>
-                          <MessageCircle className="w-4 h-4 mr-2" />
-                          Start Conversation
+                        <Button 
+                          className="rounded-xl flex-1" 
+                          size="sm" 
+                          onClick={() => handleStartConversation(connection)}
+                          disabled={creatingConversation === connection.id}
+                        >
+                          {creatingConversation === connection.id ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <MessageCircle className="w-4 h-4 mr-2" />
+                          )}
+                          {creatingConversation === connection.id ? 'Tworzenie...' : 'Start Conversation'}
                         </Button>
                         <Button variant="outline" size="sm" className="rounded-xl">
                           <Heart className="w-4 h-4" />

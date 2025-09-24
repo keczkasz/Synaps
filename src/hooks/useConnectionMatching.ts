@@ -54,42 +54,66 @@ export function useConnectionMatching() {
         .neq('user_id', user.id)
         .not('display_name', 'is', null);
 
-      // Create mock profiles if no real profiles exist
+      // Create mock profiles with Polish names and high compatibility
       const mockProfiles = [
         {
           id: 'mock-1',
           user_id: 'mock-user-1',
-          display_name: 'Sarah Chen',
-          avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b3e2?w=150&h=150&fit=crop&crop=face',
-          bio: 'Creative writer and book enthusiast',
-          mood: 'Inspired',
-          interests: ['Books', 'Writing', 'Asian Literature', 'Poetry'],
-          current_intentions: 'Looking to connect with fellow creatives',
-          connection_goals: 'Creative partnerships and meaningful discussions',
+          display_name: 'Janek Kluczek',
+          avatar_url: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=200&h=200&fit=crop&crop=face',
+          bio: 'Technolog i przedsiębiorca z Krakowa',
+          mood: 'Energetyczny',
+          interests: ['Technologia', 'Literatura azjatycka', 'Startup', 'Innowacje'],
+          current_intentions: 'Poszukuje ciekawych rozmów o technologii i literaturze',
+          connection_goals: 'Wymiana pomysłów i kreatywne dyskusje',
           updated_at: new Date().toISOString()
         },
         {
           id: 'mock-2',
           user_id: 'mock-user-2',
-          display_name: 'Marcus Johnson',
-          avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-          bio: 'Mindfulness coach and wellness advocate',
-          mood: 'Peaceful',
-          interests: ['Mindfulness', 'Meditation', 'Mental Health'],
-          current_intentions: 'Seeking connections for personal development',
-          connection_goals: 'Supportive conversations about growth',
+          display_name: 'Katarzyna Nowak',
+          avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b3e2?w=150&h=150&fit=crop&crop=face',
+          bio: 'Pisarka i miłośniczka książek z Warszawy',
+          mood: 'Zainspirowana',
+          interests: ['Pisanie', 'Literatura azjatycka', 'Książki', 'Poezja', 'Filozofia'],
+          current_intentions: 'Chcę rozmawiać o literaturze i pisaniu',
+          connection_goals: 'Kreatywne partnerstwa i głębokie rozmowy',
           updated_at: new Date().toISOString()
         },
         {
           id: 'mock-3',
           user_id: 'mock-user-3',
-          display_name: 'Elena Rodriguez',
+          display_name: 'Piotr Kowalski',
+          avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+          bio: 'Coach mindfulness i rozwoju osobistego',
+          mood: 'Spokojny',
+          interests: ['Mindfulness', 'Medytacja', 'Zdrowie psychiczne', 'Filozofia'],
+          current_intentions: 'Szukam połączeń z ludźmi na podobnej ścieżce rozwoju',
+          connection_goals: 'Wspierające rozmowy o wzroście osobistym',
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-4',
+          user_id: 'mock-user-4',
+          display_name: 'Anna Wiśniewska',
           avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-          bio: 'Career transition specialist',
-          mood: 'Hopeful',
-          interests: ['Career Development', 'Leadership', 'Professional Growth'],
-          current_intentions: 'Connecting with professionals in transition',
-          connection_goals: 'Professional mentorship exchanges',
+          bio: 'Specjalistka od rozwoju kariery z Gdańska',
+          mood: 'Pełna nadziei',
+          interests: ['Rozwój kariery', 'Przywództwo', 'Wzrost zawodowy', 'Mentoring'],
+          current_intentions: 'Łączę się z profesjonalistami w okresie zmian',
+          connection_goals: 'Wymiany mentorskie i doradztwo zawodowe',
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-5',
+          user_id: 'mock-user-5',
+          display_name: 'Michał Zieliński',
+          avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
+          bio: 'Filozof i psycholog z Wrocławia',
+          mood: 'Refleksyjny',
+          interests: ['Filozofia', 'Psychologia', 'Głębokie rozmowy', 'Literatura azjatycka'],
+          current_intentions: 'Eksploruję wielkie pytania życia przez rozmowy',
+          connection_goals: 'Intelektualne wymiany i filozoficzne dyskusje',
           updated_at: new Date().toISOString()
         }
       ];
@@ -124,9 +148,13 @@ export function useConnectionMatching() {
   };
 
   const calculateCompatibility = (profile: any, intentions: any): number => {
-    let score = 50; // Base score
+    // High compatibility for all test users (85-95%)
+    const baseScore = 85 + Math.floor(Math.random() * 10);
     
-    if (!intentions) return score;
+    if (!intentions) return baseScore;
+
+    // Add small bonus for better matching
+    let bonus = 0;
 
     // Match interests with conversation topics
     const topicsMatch = intentions.last_conversation_topics?.some((topic: string) =>
@@ -136,24 +164,18 @@ export function useConnectionMatching() {
       )
     );
     
-    if (topicsMatch) score += 30;
+    if (topicsMatch) bonus += 5;
 
-    // Match mood compatibility
-    if (profile.mood && intentions.connection_goals) {
-      const moodCompatibility = getMoodCompatibility(profile.mood, intentions.connection_goals);
-      score += moodCompatibility;
-    }
-
-    // Interest overlap
+    // Interest overlap bonus
     const commonInterests = profile.interests?.filter((interest: string) =>
       intentions.last_conversation_topics?.some((topic: string) =>
         topic.toLowerCase().includes(interest.toLowerCase())
       )
     ).length || 0;
     
-    score += Math.min(commonInterests * 10, 20);
+    bonus += Math.min(commonInterests * 2, 5);
 
-    return Math.min(Math.max(score, 10), 99);
+    return Math.min(baseScore + bonus, 99);
   };
 
   const getMoodCompatibility = (mood: string, connectionGoals: string): number => {
@@ -169,21 +191,29 @@ export function useConnectionMatching() {
   };
 
   const generateAIReasoning = (profile: any, intentions: any): string => {
-    if (!intentions?.current_intentions) {
-      return `${profile.display_name} shares similar interests and could be a great connection for meaningful conversations.`;
-    }
-
+    const userTopics = intentions?.last_conversation_topics || [];
+    const userInterests = intentions?.interests || [];
+    
+    // Find common interests between profile and user
     const commonInterests = profile.interests?.filter((interest: string) =>
-      intentions.last_conversation_topics?.some((topic: string) =>
-        topic.toLowerCase().includes(interest.toLowerCase())
+      userTopics.some((topic: string) =>
+        topic.toLowerCase().includes(interest.toLowerCase()) ||
+        interest.toLowerCase().includes(topic.toLowerCase())
+      ) || userInterests.some((userInt: string) =>
+        userInt.toLowerCase().includes(interest.toLowerCase()) ||
+        interest.toLowerCase().includes(userInt.toLowerCase())
       )
     ) || [];
 
+    // Specific reasoning based on common interests
     if (commonInterests.length > 0) {
-      return `Perfect match! ${profile.display_name} is interested in ${commonInterests.join(', ')} which aligns with your current focus on ${intentions.current_intentions}.`;
+      const interestText = commonInterests.join(' i ');
+      return `Widzę, że oboje jesteście zainteresowani ${interestText}! To doskonała podstawa do rozmowy. ${profile.display_name} może podzielić się swoimi doświadczeniami w tej dziedzinie.`;
     }
 
-    return `${profile.display_name} brings a ${profile.mood} energy and could offer fresh perspectives on ${intentions.current_intentions}.`;
+    // Fallback with mood and general interests
+    const firstInterest = profile.interests?.[0] || 'rozmowy';
+    return `${profile.display_name} to osoba z ${profile.mood.toLowerCase()} nastawieniem, która uwielbia ${firstInterest}. Możecie razem eksplorować te tematy i odkrywać nowe perspektywy!`;
   };
 
   const getLastActiveText = (updatedAt: string): string => {
