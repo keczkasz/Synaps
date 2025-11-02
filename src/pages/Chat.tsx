@@ -62,6 +62,8 @@ const Chat = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [conversation, setConversation] = useState<any>(null);
   const [otherUser, setOtherUser] = useState<any>(null);
+  const [connectionData, setConnectionData] = useState<any>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -144,6 +146,24 @@ const Chat = () => {
 
       setOtherUser(profile);
       setMessages(conversationData.messages || []);
+
+      // Fetch current user's profile
+      const { data: myProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      setCurrentUserProfile(myProfile);
+
+      // Fetch connection data between users
+      const { data: connectionInfo } = await supabase
+        .from('connections')
+        .select('*')
+        .or(`and(user_id.eq.${user.id},connected_user_id.eq.${otherUserId}),and(user_id.eq.${otherUserId},connected_user_id.eq.${user.id})`)
+        .single();
+
+      setConnectionData(connectionInfo);
     } catch (error) {
       console.error('Error fetching conversation:', error);
     } finally {
@@ -210,7 +230,17 @@ const Chat = () => {
   const displayAvatar = displayUser?.avatar_url || displayUser?.avatar;
   const displayMood = displayUser?.mood;
   const displayInterests = displayUser?.interests || [];
-  const displayReasoning = connection?.aiReasoning || `Połączyliśmy was ze względu na wspólne zainteresowania i podobne cele. Mamy nadzieję, że będziecie mieli świetną rozmowę!`;
+  const displayReasoning = connectionData?.ai_reasoning || connection?.aiReasoning || `Połączyliśmy was ze względu na wspólne zainteresowania i podobne cele. Mamy nadzieję, że będziecie mieli świetną rozmowę!`;
+  
+  // Calculate shared interests
+  const myInterests = currentUserProfile?.interests || [];
+  const theirInterests = displayInterests;
+  const sharedInterests = myInterests.filter((interest: string) => 
+    theirInterests.some((theirInterest: string) => 
+      theirInterest.toLowerCase() === interest.toLowerCase()
+    )
+  );
+  const compatibilityScore = connectionData?.compatibility_score;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -256,14 +286,36 @@ const Chat = () => {
             <h3 className="font-medium text-foreground mb-2 flex items-center gap-2">
               AI Connection Insight
               <Badge variant="secondary" className="text-xs">{displayMood}</Badge>
+              {compatibilityScore && (
+                <Badge variant="default" className="text-xs">
+                  {compatibilityScore}% zgodności
+                </Badge>
+              )}
             </h3>
             <p className="text-sm text-muted-foreground mb-3">{displayReasoning}</p>
-            <div className="flex flex-wrap gap-1">
-              {displayInterests.map((interest: string, index: number) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  {interest}
-                </Badge>
-              ))}
+            
+            {sharedInterests.length > 0 && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-foreground mb-2">Wspólne zainteresowania:</p>
+                <div className="flex flex-wrap gap-1">
+                  {sharedInterests.map((interest: string, index: number) => (
+                    <Badge key={index} variant="default" className="text-xs">
+                      {interest}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <p className="text-xs font-medium text-foreground mb-2">Wszystkie zainteresowania {displayName}:</p>
+              <div className="flex flex-wrap gap-1">
+                {displayInterests.map((interest: string, index: number) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {interest}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         </div>
