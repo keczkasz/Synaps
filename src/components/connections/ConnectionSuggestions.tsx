@@ -18,6 +18,14 @@ export function ConnectionSuggestions() {
     try {
       setCreatingConversation(connection.id);
       
+      // Check if this is a mock user (for testing purposes)
+      if (connection.user_id && connection.user_id.startsWith('mock-user-')) {
+        // Show a message for demo users
+        alert('This is a demo profile for testing. To start real conversations, create another account or invite friends to join!');
+        setCreatingConversation(null);
+        return;
+      }
+      
       const { data, error } = await supabase.functions.invoke('create-conversation', {
         body: {
           connectedUserId: connection.user_id,

@@ -137,7 +137,7 @@ Return only valid JSON without markdown formatting or code blocks.`;
           .from('ai_insights')
           .insert({
             user_id: user.id,
-            insight_type: 'connection_intentions',
+            insight_type: 'conversation_suggestion',
             content: aiResponse,
             metadata: insights
           });
@@ -156,6 +156,8 @@ Return only valid JSON without markdown formatting or code blocks.`;
             current_intentions: insights.current_intentions,
             connection_goals: insights.connection_goals,
             last_conversation_topics: insights.conversation_topics || []
+          }, {
+            onConflict: 'user_id'
           });
 
         if (profileError) {
@@ -172,6 +174,8 @@ Return only valid JSON without markdown formatting or code blocks.`;
             desired_conversation_type: insights.desired_conversation_type,
             topics_of_interest: insights.conversation_topics || [],
             energy_level: insights.energy_level || 5
+          }, {
+            onConflict: 'user_id,session_date'
           });
 
         if (sessionError) {
