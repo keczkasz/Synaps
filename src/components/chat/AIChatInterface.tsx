@@ -94,7 +94,7 @@ export function AIChatInterface() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">AI Companion</h2>
-              <p className="text-sm text-muted-foreground">Connect faster than any tool on Earth</p>
+              <p className="text-sm text-muted-foreground">Connect with ChatGPT or Gemini</p>
             </div>
           </div>
           <Button

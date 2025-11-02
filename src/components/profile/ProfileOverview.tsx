@@ -108,11 +108,21 @@ export function ProfileOverview() {
 
       setAvatarUrl(publicUrl);
 
+      // Ensure profile exists before updating
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .single();
+
       const { error: updateError } = await supabase
         .from('profiles')
         .upsert({
           user_id: user.id,
-          avatar_url: publicUrl
+          avatar_url: publicUrl,
+          display_name: existingProfile?.display_name || user.email?.split('@')[0] || 'User'
+        }, {
+          onConflict: 'user_id'
         });
 
       if (updateError) throw updateError;
@@ -121,6 +131,9 @@ export function ProfileOverview() {
         title: "Success",
         description: "Profile photo updated successfully!",
       });
+      
+      // Refresh profile data
+      await fetchProfile();
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast({

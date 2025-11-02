@@ -1,1 +1,10 @@
 project_id = "vkcxoxoxrpllcbyhdyam"
+
+[functions.ai-chat]
+verify_jwt = true
+
+[functions.create-conversation]
+verify_jwt = true
+
+[functions.import-chatgpt-memory]
+verify_jwt = true
