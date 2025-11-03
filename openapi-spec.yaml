@@ -1,0 +1,337 @@
+openapi: 3.1.0
+info:
+  title: Synaps Connection API
+  description: |
+    Find and connect with people based on shared interests and conversation topics.
+    This API enables ChatGPT to help users discover meaningful connections.
+  version: 1.0.0
+  contact:
+    name: Synaps Support
+    url: https://synaps.app
+
+servers:
+  - url: https://vkcxoxoxrpllcbyhdyam.supabase.co/functions/v1
+    description: Production server
+
+security:
+  - OAuth2: []
+
+paths:
+  /gpt-api-get-profile:
+    post:
+      operationId: getProfile
+      summary: Get current user's profile
+      description: Retrieve the authenticated user's profile including interests, mood, and conversation preferences
+      tags:
+        - Profile
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Profile not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /gpt-api-update-profile:
+    post:
+      operationId: updateProfile
+      summary: Update user's profile
+      description: Update the user's interests, mood, or conversation preferences based on conversation analysis
+      tags:
+        - Profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateProfileResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /gpt-api-find-matches:
+    post:
+      operationId: findMatches
+      summary: Find connection matches
+      description: Search for users who match specified interests, topics, or conversation preferences
+      tags:
+        - Connections
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindMatchesRequest'
+      responses:
+        '200':
+          description: Matches found successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FindMatchesResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /gpt-api-create-connection:
+    post:
+      operationId: createConnection
+      summary: Create a connection
+      description: Initiate a conversation between the authenticated user and a target user
+      tags:
+        - Connections
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConnectionRequest'
+      responses:
+        '200':
+          description: Connection created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateConnectionResponse'
+        '400':
+          description: Invalid request parameters
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Target user not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://vkcxoxoxrpllcbyhdyam.supabase.co/functions/v1/oauth-authorize
+          tokenUrl: https://vkcxoxoxrpllcbyhdyam.supabase.co/functions/v1/oauth-token
+          scopes:
+            profile: Access to user profile information
+            connections: Ability to find and create connections
+
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Unique user identifier
+        displayName:
+          type: string
+          description: User's display name
+        interests:
+          type: array
+          items:
+            type: string
+          description: List of user's interests
+        currentMood:
+          type: string
+          nullable: true
+          description: User's current mood or emotional state
+        currentIntentions:
+          type: string
+          nullable: true
+          description: User's current goals or intentions
+        conversationTopics:
+          type: array
+          items:
+            type: string
+          description: Topics the user enjoys discussing
+        bio:
+          type: string
+          nullable: true
+          description: User's biography
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        interests:
+          type: array
+          items:
+            type: string
+          description: Updated list of interests
+        currentMood:
+          type: string
+          description: Updated mood
+        currentIntentions:
+          type: string
+          description: Updated intentions or goals
+        conversationTopics:
+          type: array
+          items:
+            type: string
+          description: Updated conversation topics
+
+    UpdateProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+
+    FindMatchesRequest:
+      type: object
+      properties:
+        topic:
+          type: string
+          description: Topic or interest to match on
+        mood:
+          type: string
+          description: Desired mood compatibility
+        conversationType:
+          type: string
+          description: Type of conversation (casual, deep, creative, etc.)
+        limit:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 20
+          description: Maximum number of matches to return
+
+    Match:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Matched user's ID
+        displayName:
+          type: string
+          description: Matched user's name
+        interests:
+          type: array
+          items:
+            type: string
+          description: User's interests
+        currentMood:
+          type: string
+          nullable: true
+          description: User's current mood
+        bio:
+          type: string
+          nullable: true
+          description: User's biography
+        compatibilityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Compatibility score (0-100)
+        matchReasons:
+          type: array
+          items:
+            type: string
+          description: Reasons for the match
+        lastActive:
+          type: string
+          format: date-time
+          description: Last activity timestamp
+
+    FindMatchesResponse:
+      type: object
+      properties:
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/Match'
+        totalFound:
+          type: integer
+          description: Total number of matches found
+        searchCriteria:
+          type: object
+          properties:
+            topic:
+              type: string
+            mood:
+              type: string
+            conversationType:
+              type: string
+
+    CreateConnectionRequest:
+      type: object
+      required:
+        - targetUserId
+      properties:
+        targetUserId:
+          type: string
+          format: uuid
+          description: ID of the user to connect with
+        introMessage:
+          type: string
+          description: Custom introduction message from the GPT
+
+    CreateConnectionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        conversationId:
+          type: string
+          format: uuid
+          description: ID of the created conversation
+        conversationUrl:
+          type: string
+          format: uri
+          description: URL to access the conversation
+        targetUser:
+          type: object
+          properties:
+            userId:
+              type: string
+              format: uuid
+            displayName:
+              type: string
+        isNewConversation:
+          type: boolean
+          description: Whether this is a new conversation or existing one
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code or message
+
+  responses:
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,166 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyOAuthToken, logApiCall } from '../_shared/oauth-middleware.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Verify OAuth token
+    const authResult = await verifyOAuthToken(req.headers.get('Authorization'));
+    
+    if (authResult.error) {
+      await logApiCall('unknown', '/gpt-api-find-matches', req.method, authResult.status, null, null, authResult.error);
+      return new Response(JSON.stringify({ error: authResult.error }), {
+        status: authResult.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = authResult.userId!;
+    const requestBody = await req.json();
+    const { topic, mood, conversationType, limit = 5 } = requestBody;
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
+
+    // Get current user's profile
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (!userProfile) {
+      await logApiCall(userId, '/gpt-api-find-matches', req.method, 404, requestBody, null, 'User profile not found');
+      return new Response(JSON.stringify({ error: 'User profile not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get all other users
+    const { data: allProfiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .neq('id', userId);
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      await logApiCall(userId, '/gpt-api-find-matches', req.method, 500, requestBody, null, 'Failed to fetch profiles');
+      return new Response(JSON.stringify({ error: 'Failed to fetch profiles' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Calculate compatibility scores
+    const matches = allProfiles.map(profile => {
+      let score = 0;
+      let reasons: string[] = [];
+
+      // Check interests overlap
+      const userInterests = userProfile.interests || [];
+      const profileInterests = profile.interests || [];
+      const sharedInterests = userInterests.filter((interest: string) => 
+        profileInterests.includes(interest)
+      );
+
+      if (sharedInterests.length > 0) {
+        score += sharedInterests.length * 15;
+        reasons.push(`Shared interests: ${sharedInterests.join(', ')}`);
+      }
+
+      // Check if topic matches interests or conversation topics
+      if (topic) {
+        const topicLower = topic.toLowerCase();
+        const matchesInterests = profileInterests.some((interest: string) => 
+          interest.toLowerCase().includes(topicLower) || topicLower.includes(interest.toLowerCase())
+        );
+        const matchesTopics = (profile.conversation_topics || []).some((t: string) => 
+          t.toLowerCase().includes(topicLower) || topicLower.includes(t.toLowerCase())
+        );
+
+        if (matchesInterests) {
+          score += 25;
+          reasons.push(`Interested in ${topic}`);
+        }
+        if (matchesTopics) {
+          score += 20;
+          reasons.push(`Enjoys discussing ${topic}`);
+        }
+      }
+
+      // Check mood compatibility
+      if (mood && profile.current_mood) {
+        if (mood.toLowerCase() === profile.current_mood.toLowerCase()) {
+          score += 10;
+          reasons.push(`Similar mood: ${mood}`);
+        }
+      }
+
+      // Check current intentions compatibility
+      if (userProfile.current_intentions && profile.current_intentions) {
+        const userIntentionsLower = userProfile.current_intentions.toLowerCase();
+        const profileIntentionsLower = profile.current_intentions.toLowerCase();
+        
+        if (userIntentionsLower.includes(profileIntentionsLower) || 
+            profileIntentionsLower.includes(userIntentionsLower)) {
+          score += 15;
+          reasons.push('Compatible goals');
+        }
+      }
+
+      return {
+        userId: profile.id,
+        displayName: profile.display_name,
+        interests: profile.interests || [],
+        currentMood: profile.current_mood,
+        bio: profile.bio,
+        compatibilityScore: Math.min(score, 100),
+        matchReasons: reasons,
+        lastActive: profile.updated_at
+      };
+    });
+
+    // Sort by compatibility score and filter by minimum score
+    const sortedMatches = matches
+      .filter(m => m.compatibilityScore > 0)
+      .sort((a, b) => b.compatibilityScore - a.compatibilityScore)
+      .slice(0, limit);
+
+    const response = {
+      matches: sortedMatches,
+      totalFound: sortedMatches.length,
+      searchCriteria: {
+        topic,
+        mood,
+        conversationType
+      }
+    };
+
+    await logApiCall(userId, '/gpt-api-find-matches', req.method, 200, requestBody, { matchCount: sortedMatches.length });
+
+    return new Response(JSON.stringify(response), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Error in gpt-api-find-matches:', error);
+    await logApiCall('unknown', '/gpt-api-find-matches', req.method, 500, null, null, error instanceof Error ? error.message : 'Unknown error');
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
