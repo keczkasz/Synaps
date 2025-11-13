@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ const Auth = () => {
   const { signUp, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +62,7 @@ const Auth = () => {
       setError(error.message);
       setLoading(false);
     } else {
-      navigate("/");
+      navigate(redirectUrl || "/");
     }
   };
 
