@@ -16,7 +16,9 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { signUp, signIn } = useAuth();
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const { signUp, signIn, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -63,6 +65,32 @@ const Auth = () => {
       setLoading(false);
     } else {
       navigate(redirectUrl || "/");
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      setError("Email is required");
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+    
+    const { error } = await resetPassword(resetEmail);
+    
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      toast({
+        title: "Reset email sent!",
+        description: "Check your email for password reset instructions.",
+      });
+      setShowResetPassword(false);
+      setResetEmail("");
+      setLoading(false);
     }
   };
 
@@ -113,7 +141,17 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="h-auto p-0 text-xs text-muted-foreground"
+                        onClick={() => setShowResetPassword(true)}
+                      >
+                        Forgot password?
+                      </Button>
+                    </div>
                     <Input
                       id="signin-password"
                       type="password"
@@ -198,6 +236,58 @@ const Auth = () => {
             ← Back to Home
           </Button>
         </div>
+
+        {/* Password Reset Dialog */}
+        {showResetPassword && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md shadow-card border-0">
+              <CardHeader>
+                <CardTitle>Reset Password</CardTitle>
+                <CardDescription>
+                  Enter your email address and we'll send you a link to reset your password.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => {
+                        setShowResetPassword(false);
+                        setResetEmail("");
+                        setError("");
+                      }}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="flex-1" 
+                      disabled={loading}
+                    >
+                      {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Send Reset Link
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
