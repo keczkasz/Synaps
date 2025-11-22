@@ -35,33 +35,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ai_insights: {
-        Row: {
-          content: string
-          created_at: string
-          id: string
-          insight_type: string
-          metadata: Json | null
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          id?: string
-          insight_type: string
-          metadata?: Json | null
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          id?: string
-          insight_type?: string
-          metadata?: Json | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       ai_messages: {
         Row: {
           content: string
@@ -97,62 +70,180 @@ export type Database = {
           },
         ]
       }
-      connections: {
-        Row: {
-          ai_reasoning: string | null
-          compatibility_score: number | null
-          connected_user_id: string
-          created_at: string
-          id: string
-          status: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ai_reasoning?: string | null
-          compatibility_score?: number | null
-          connected_user_id: string
-          created_at?: string
-          id?: string
-          status?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ai_reasoning?: string | null
-          compatibility_score?: number | null
-          connected_user_id?: string
-          created_at?: string
-          id?: string
-          status?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       conversations: {
         Row: {
           created_at: string
           id: string
-          last_message_at: string | null
+          last_message_at: string
           user1_id: string
           user2_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          last_message_at?: string | null
+          last_message_at?: string
           user1_id: string
           user2_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          last_message_at?: string | null
+          last_message_at?: string
           user1_id?: string
           user2_id?: string
         }
         Relationships: []
+      }
+      gpt_api_logs: {
+        Row: {
+          created_at: string
+          endpoint: string
+          error_message: string | null
+          id: string
+          method: string
+          request_body: Json | null
+          response_body: Json | null
+          status_code: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          method: string
+          request_body?: Json | null
+          response_body?: Json | null
+          status_code: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          method?: string
+          request_body?: Json | null
+          response_body?: Json | null
+          status_code?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      gpt_oauth_clients: {
+        Row: {
+          client_id: string
+          client_name: string
+          client_secret: string
+          created_at: string
+          id: string
+          redirect_uris: string[]
+        }
+        Insert: {
+          client_id: string
+          client_name: string
+          client_secret: string
+          created_at?: string
+          id?: string
+          redirect_uris: string[]
+        }
+        Update: {
+          client_id?: string
+          client_name?: string
+          client_secret?: string
+          created_at?: string
+          id?: string
+          redirect_uris?: string[]
+        }
+        Relationships: []
+      }
+      gpt_oauth_codes: {
+        Row: {
+          client_id: string
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          redirect_uri: string
+          scope: string
+          used: boolean
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          redirect_uri: string
+          scope: string
+          used?: boolean
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redirect_uri?: string
+          scope?: string
+          used?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gpt_oauth_codes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "gpt_oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+        ]
+      }
+      gpt_oauth_tokens: {
+        Row: {
+          access_token: string
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          revoked: boolean
+          scope: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          client_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          revoked?: boolean
+          scope: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          revoked?: boolean
+          scope?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gpt_oauth_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "gpt_oauth_clients"
+            referencedColumns: ["client_id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -226,42 +317,6 @@ export type Database = {
           interests?: string[] | null
           last_conversation_topics?: string[] | null
           mood?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_sessions: {
-        Row: {
-          created_at: string
-          daily_goals: string | null
-          desired_conversation_type: string | null
-          energy_level: number | null
-          id: string
-          session_date: string
-          topics_of_interest: string[] | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          daily_goals?: string | null
-          desired_conversation_type?: string | null
-          energy_level?: number | null
-          id?: string
-          session_date?: string
-          topics_of_interest?: string[] | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          daily_goals?: string | null
-          desired_conversation_type?: string | null
-          energy_level?: number | null
-          id?: string
-          session_date?: string
-          topics_of_interest?: string[] | null
           updated_at?: string
           user_id?: string
         }
