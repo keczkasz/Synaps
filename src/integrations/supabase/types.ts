@@ -112,6 +112,51 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs_archive: {
+        Row: {
+          action: string
+          archived_at: string
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string
+          status: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          archived_at?: string
+          created_at: string
+          error_message?: string | null
+          id: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          status: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          archived_at?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          status?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string

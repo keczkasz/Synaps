@@ -28,3 +28,6 @@ verify_jwt = false
 
 [functions.gpt-api-create-connection]
 verify_jwt = false
+
+[functions.archive-audit-logs]
+verify_jwt = false
