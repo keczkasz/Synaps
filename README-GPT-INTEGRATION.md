@@ -9,18 +9,45 @@ The Synaps GPT integration allows users to discover and connect with others who 
 ## Architecture
 
 ```
-ChatGPT GPT
-    ↓ (OAuth 2.0)
-OAuth Authorization Flow
+ChatGPT Custom GPT
+    ↓ (OAuth 2.0 Authorization Code Flow)
+Supabase Edge Function: oauth-authorize (GET)
+    ↓ (302 Redirect)
+Frontend: /oauth-consent (User logs in & approves)
+    ↓ (POST approval)
+Supabase Edge Function: oauth-authorize (POST)
+    ↓ (Returns authorization code)
+ChatGPT receives code, exchanges for tokens
     ↓
-GPT API Endpoints (Supabase Edge Functions)
+Supabase Edge Function: oauth-token
     ↓
-Synaps Database & Profile Matching
+GPT API Endpoints (profile, matches, connections)
 ```
+
+## Prerequisites
+
+- Supabase project with Edge Functions enabled
+- Frontend deployed (e.g., `https://synaps-plugin.lovable.app`)
+- OAuth client credentials configured in database
 
 ## Setup Instructions
 
-### Step 1: Get OAuth Credentials
+### Step 1: Configure Supabase Secrets
+
+**Important:** Set the `FRONTEND_URL` secret in your Supabase project:
+
+```bash
+# Using Supabase CLI
+supabase secrets set FRONTEND_URL=https://synaps-plugin.lovable.app
+
+# Or via Supabase Dashboard:
+# 1. Go to Project Settings → Edge Functions
+# 2. Add secret: FRONTEND_URL = https://synaps-plugin.lovable.app
+```
+
+This tells the OAuth flow where to redirect users for the consent screen.
+
+### Step 2: Get OAuth Credentials
 
 1. The default OAuth client is already configured in the database
 2. Get the client credentials:
@@ -30,7 +57,15 @@ Synaps Database & Profile Matching
    WHERE name = 'ChatGPT Synaps Integration';
    ```
 
-### Step 2: Create Custom GPT
+3. **Important:** Add ChatGPT's callback URL to the allowed redirect URIs:
+   ```sql
+   UPDATE gpt_oauth_clients 
+   SET redirect_uris = array_append(redirect_uris, 'https://chat.openai.com/aip/g-XXXXX/oauth/callback')
+   WHERE name = 'ChatGPT Synaps Integration';
+   ```
+   Replace `g-XXXXX` with your actual GPT ID (found in your GPT's URL)
+
+### Step 3: Create Custom GPT
 
 1. Go to https://chat.openai.com/gpts/editor
 2. Click "Create a GPT"
@@ -53,7 +88,7 @@ Add these starters:
 - ☐ DALL·E Image Generation
 - ☑️ Code Interpreter (optional)
 
-### Step 3: Configure Actions
+### Step 4: Configure Actions
 
 1. In the GPT editor, go to "Actions"
 2. Click "Create new action"
@@ -73,7 +108,7 @@ Add these starters:
 
 5. Save the action configuration
 
-### Step 4: Test the Integration
+### Step 5: Test the Integration
 
 1. In the GPT editor, click "Preview"
 2. Try these test conversations:
@@ -99,7 +134,7 @@ You: "Connect me with the first person"
 GPT: [Creates connection and provides conversation link]
 ```
 
-### Step 5: Publish (Optional)
+### Step 6: Publish (Optional)
 
 1. Click "Save" in the GPT editor
 2. Choose visibility:
@@ -183,9 +218,45 @@ The GPT can only access:
 - Review API logs for specific error
 
 ### OAuth Redirect Issues
-- Verify redirect URIs match exactly
-- Check URL Configuration in Supabase
-- Ensure HTTPS is used
+
+**Symptom:** User clicks authorize but gets a blank page or error
+
+**Common causes:**
+
+1. **Missing FRONTEND_URL secret:**
+   ```bash
+   supabase secrets set FRONTEND_URL=https://synaps-plugin.lovable.app
+   ```
+
+2. **Redirect URI not in allowed list:**
+   ```sql
+   -- Check current redirect URIs
+   SELECT redirect_uris FROM gpt_oauth_clients;
+   
+   -- Add ChatGPT callback URL
+   UPDATE gpt_oauth_clients 
+   SET redirect_uris = array_append(redirect_uris, 'https://chat.openai.com/aip/g-YOUR-GPT-ID/oauth/callback')
+   WHERE client_id = 'your-client-id';
+   ```
+
+3. **Wrong callback URL format:** ChatGPT callback URLs follow this pattern:
+   - `https://chat.openai.com/aip/g-{gpt-id}/oauth/callback`
+
+4. **CORS issues:** The Edge Functions include proper CORS headers. If you see CORS errors, check the browser console for the actual error.
+
+### Debug OAuth Flow
+
+Check the Supabase Edge Function logs:
+
+```bash
+# View oauth-authorize logs
+supabase functions logs oauth-authorize
+
+# View oauth-token logs  
+supabase functions logs oauth-token
+```
+
+The logs include detailed information about each request including parameters received and any errors.
 
 ## Monitoring & Maintenance
 

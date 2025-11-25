@@ -1,14 +1,19 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 // ChatGPT GPT OAuth Authorization endpoint
+// Frontend URL for the consent page - configure this in Supabase secrets
+const FRONTEND_URL = Deno.env.get('FRONTEND_URL') ?? 'https://synaps-plugin.lovable.app';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
 serve(async (req) => {
+  // Handle preflight CORS requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,71 +25,134 @@ serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const clientId = url.searchParams.get('client_id');
-    const redirectUri = url.searchParams.get('redirect_uri');
-    const state = url.searchParams.get('state');
-    const scope = url.searchParams.get('scope') || 'profile connections';
-    const responseType = url.searchParams.get('response_type');
 
-    // Validate required parameters
-    if (!clientId || !redirectUri || !responseType || responseType !== 'code') {
-      return new Response(JSON.stringify({ 
-        error: 'invalid_request',
-        error_description: 'Missing or invalid required parameters'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Verify client exists and redirect URI is valid
-    const { data: client, error: clientError } = await supabase
-      .from('gpt_oauth_clients')
-      .select('*')
-      .eq('client_id', clientId)
-      .single();
-
-    if (clientError || !client) {
-      return new Response(JSON.stringify({ 
-        error: 'invalid_client',
-        error_description: 'Client not found'
-      }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!client.redirect_uris.includes(redirectUri)) {
-      return new Response(JSON.stringify({ 
-        error: 'invalid_request',
-        error_description: 'Invalid redirect URI'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // For GET requests, return HTML consent page
+    // For GET requests, redirect to consent page
     if (req.method === 'GET') {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-      const consentPageUrl = `${supabaseUrl.replace('.supabase.co', '')}/oauth-consent?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state || ''}&scope=${encodeURIComponent(scope)}`;
+      const clientId = url.searchParams.get('client_id');
+      const redirectUri = url.searchParams.get('redirect_uri');
+      const state = url.searchParams.get('state');
+      const scope = url.searchParams.get('scope') || 'profile connections';
+      const responseType = url.searchParams.get('response_type');
+
+      console.log('OAuth authorize GET request:', { clientId, redirectUri, state, scope, responseType });
+
+      // Validate required parameters
+      if (!clientId || !redirectUri || !responseType || responseType !== 'code') {
+        console.error('Missing required parameters:', { clientId, redirectUri, responseType });
+        return new Response(JSON.stringify({ 
+          error: 'invalid_request',
+          error_description: 'Missing or invalid required parameters. Required: client_id, redirect_uri, response_type=code'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Verify client exists and redirect URI is valid
+      const { data: client, error: clientError } = await supabase
+        .from('gpt_oauth_clients')
+        .select('*')
+        .eq('client_id', clientId)
+        .single();
+
+      if (clientError || !client) {
+        console.error('Client not found:', clientId, clientError);
+        return new Response(JSON.stringify({ 
+          error: 'invalid_client',
+          error_description: 'Client not found'
+        }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check if redirect URI is allowed
+      const allowedUris = client.redirect_uris || [];
+      if (!allowedUris.includes(redirectUri)) {
+        console.error('Invalid redirect URI:', redirectUri, 'Allowed:', allowedUris);
+        return new Response(JSON.stringify({ 
+          error: 'invalid_request',
+          error_description: 'Invalid redirect URI'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Construct consent page URL with all required parameters
+      const consentParams = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope: scope,
+        ...(state && { state: state })
+      });
+
+      const consentPageUrl = `${FRONTEND_URL}/oauth-consent?${consentParams.toString()}`;
+      
+      console.log('Redirecting to consent page:', consentPageUrl);
       
       return new Response(null, {
         status: 302,
         headers: {
-          ...corsHeaders,
-          'Location': consentPageUrl
+          'Location': consentPageUrl,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       });
     }
 
-    // For POST requests (user approved), create authorization code
+    // For POST requests (user approved/denied), create authorization code
     if (req.method === 'POST') {
-      const { approved, userId } = await req.json();
+      const body = await req.json();
+      const { approved, userId, clientId, redirectUri, state, scope = 'profile connections' } = body;
+
+      console.log('OAuth authorize POST request:', { approved, userId, clientId, redirectUri, state, scope });
+
+      if (!clientId || !redirectUri) {
+        return new Response(JSON.stringify({ 
+          error: 'invalid_request',
+          error_description: 'Missing clientId or redirectUri'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       if (!approved) {
-        const errorUrl = `${redirectUri}?error=access_denied&error_description=User denied access${state ? `&state=${state}` : ''}`;
+        const errorParams = new URLSearchParams({
+          error: 'access_denied',
+          error_description: 'User denied access',
+          ...(state && { state: state })
+        });
+        const errorUrl = `${redirectUri}?${errorParams.toString()}`;
         return new Response(JSON.stringify({ redirect: errorUrl }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!userId) {
+        return new Response(JSON.stringify({ 
+          error: 'invalid_request',
+          error_description: 'User ID is required for approval'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Verify client exists
+      const { data: client, error: clientError } = await supabase
+        .from('gpt_oauth_clients')
+        .select('*')
+        .eq('client_id', clientId)
+        .single();
+
+      if (clientError || !client) {
+        console.error('Client not found for POST:', clientId, clientError);
+        return new Response(JSON.stringify({ 
+          error: 'invalid_client',
+          error_description: 'Client not found'
+        }), {
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -115,7 +183,15 @@ serve(async (req) => {
         });
       }
 
-      const successUrl = `${redirectUri}?code=${code}${state ? `&state=${state}` : ''}`;
+      // Construct success redirect URL
+      const successParams = new URLSearchParams({
+        code: code,
+        ...(state && { state: state })
+      });
+      const successUrl = `${redirectUri}?${successParams.toString()}`;
+
+      console.log('Authorization successful, redirecting to:', successUrl);
+      
       return new Response(JSON.stringify({ redirect: successUrl }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
